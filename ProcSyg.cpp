@@ -6,6 +6,7 @@
 #include "ProcSyg.h"
 #include <windows.h>
 #include <commdlg.h>
+#include <commctrl.h>
 #include <string>
 #include <vector>
 #include <stdio.h>
@@ -35,7 +36,12 @@ HWND hButtonPlay = NULL;                         // Handle for Play button
 HWND hButtonStop = NULL;                         // Handle for Stop button
 HWND hButtonExit = NULL;                         // Handle for Exit button
 std::vector<short> audioData;
-#pragma pack(push, 1) // Ensure structures are packed
+#pragma pack(push, 1)                            // Ensure structures are packed
+
+//Effects variables
+double DELAY_GAIN = 1;                          //Gain of delay effect
+double DELAY_TIME = 1000;                       //Delay time in miliseconds
+
 
 struct WAVHeader {
     char riff[4]; // RIFF Header
@@ -54,7 +60,63 @@ struct WAVHeader {
 };
 
 #pragma pack(pop) // Restore packing
+HWAVEOUT hWaveOut = nullptr;
+WAVEFORMATEX waveFormat = {};
+WAVEHDR waveHeader = {};
 
+bool InitializeWaveFormat(const WAVHeader& header) {
+    // Set up the wave format structure with file header data
+    waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+    waveFormat.nChannels = header.numChannels;
+    waveFormat.nSamplesPerSec = header.sampleRate;
+    waveFormat.wBitsPerSample = header.bitsPerSample;
+    waveFormat.nBlockAlign = (waveFormat.wBitsPerSample * waveFormat.nChannels) / 8;
+    waveFormat.nAvgBytesPerSec = waveFormat.nSamplesPerSec * waveFormat.nBlockAlign;
+    waveFormat.cbSize = 0;
+
+    // Close the existing waveOut device, if any, before opening a new one
+    if (hWaveOut) {
+        waveOutClose(hWaveOut);
+        hWaveOut = nullptr;
+    }
+
+    // Open the wave output device
+    MMRESULT result = waveOutOpen(&hWaveOut, WAVE_MAPPER, &waveFormat, 0, 0, CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR) {
+        MessageBox(NULL, L"Failed to open audio output device!", L"Error", MB_OK | MB_ICONERROR);
+        return false;
+    }
+    return true;
+}
+void PlayAudioData() {
+    if (audioData.empty()) {
+        MessageBox(NULL, L"No audio data loaded!", L"Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    if (hWaveOut == nullptr) {
+        MessageBox(NULL, L"Audio device is not initialized!", L"Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+
+    // Prepare the WAVEHDR with audioData
+    waveHeader.lpData = reinterpret_cast<LPSTR>(audioData.data());
+    waveHeader.dwBufferLength = static_cast<DWORD>(audioData.size() * sizeof(short)); // Size in bytes
+    waveHeader.dwFlags = 0;
+    waveHeader.dwLoops = 0;
+
+    // Prepare and write audio data for playback
+    MMRESULT result = waveOutPrepareHeader(hWaveOut, &waveHeader, sizeof(WAVEHDR));
+    if (result == MMSYSERR_NOERROR) {
+        result = waveOutWrite(hWaveOut, &waveHeader, sizeof(WAVEHDR));
+        if (result != MMSYSERR_NOERROR) {
+            MessageBox(NULL, L"Failed to play audio!", L"Error", MB_OK | MB_ICONERROR);
+        }
+    }
+    else {
+        MessageBox(NULL, L"Failed to prepare audio header!", L"Error", MB_OK | MB_ICONERROR);
+    }
+}
 
 // Przekaż dalej deklaracje funkcji dołączone w tym module kodu:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -119,7 +181,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_PROCSYG));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = CreateSolidBrush(RGB(50, 50, 50));;
+    wcex.hbrBackground  = CreateSolidBrush(RGB(50, 50, 50));
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_PROCSYG);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
@@ -175,6 +237,39 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Analizuj zaznaczenia menu:
             switch (wmId)
             {
+
+            case ID_EFFECTS_COMPRESSOR:
+                break;
+            case ID_EFFECTS_DISTORTION:
+                break;
+            case ID_EFFECTS_PHASER:
+                break;
+            case ID_EFFECTS_FLANGER:
+                break;
+            case ID_EFFECTS_CHORUS:
+                break;
+            case ID_EFFECTS_VINTAGE:
+                break;
+            case ID_EFFECTS_REVERSE:
+                break;
+            case ID_EFFECTS_REVERB:
+                break;
+
+            case ID_EFFECTS_DELAY:
+                if (FileLoaded) {
+                    std::vector<short> newAudioData;
+                    double inverse = DELAY_TIME/ 1000;
+                    double DelayFactor = round(44100 / inverse); //number of samples to delay
+                    for (double i = DelayFactor; i < audioData.size(); i++) {
+                        newAudioData.push_back(audioData[i] + DELAY_GAIN * audioData[i - DelayFactor] );
+                    }
+
+                    audioData.clear();
+                    audioData = newAudioData;
+
+                }
+                break;
+
             case ID_PLIK_OPEN:
             {
                 OPENFILENAME file;            // common dialog box structure
@@ -215,12 +310,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     fread(audioData.data(), sizeof(short), audioData.size(), wavFile);
                     fclose(wavFile);
 
+                    if (!InitializeWaveFormat(Header)) {
+                        MessageBox(hWnd, L"Audio playback initialization failed.", L"Error", MB_OK | MB_ICONERROR);
+                    }
+
                 }
             }
-            break;
+                break;
 
             case ID_BUTTON_PLAY:
-                PlaySound(selectedFilePath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+                //PlaySound(selectedFilePath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+                PlayAudioData();
                 break;
 
 
@@ -284,6 +384,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     LineTo(hdc, x, (height / 2) - y); // Draw line to the calculated point
                 }
             }
+        
         }
         EndPaint(hWnd, &ps);
     }

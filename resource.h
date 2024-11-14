@@ -12,6 +12,9 @@
 #define IDI_SMALL                       108
 #define IDC_PROCSYG                     109
 #define IDR_MAINFRAME                   128
+#define IDC_BUTTON1                     1000
+#define IDC_DEALY_GAIN_APPLY_BUTTON     1000
+#define ID_BUTTON_PLAY                  1001
 #define ID_PLIK_OPEN                    32771
 #define ID_PLIK_SAVE                    32772
 #define ID_PLIK_SAVEAS                  32773
@@ -33,8 +36,7 @@
 #define ID_EFFECTS_DELAY                32789
 #define ID_EFFECTS_LOOP                 32790
 #define ID_EFFECTS_REVERSE              32791
-#define ID_BUTTON_PLAY					1001 // Unique ID for the Process button
-
+#define ID_EFFECTS_REVERB               32802
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -43,8 +45,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         32792
-#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_COMMAND_VALUE         32803
+#define _APS_NEXT_CONTROL_VALUE         1003
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
