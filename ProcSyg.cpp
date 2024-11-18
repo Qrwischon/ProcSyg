@@ -11,6 +11,7 @@
 #include <vector>
 #include <stdio.h>
 #include <mmsystem.h>
+#include <cmath>
 #pragma comment(lib, "winmm.lib")
 
 
@@ -41,7 +42,7 @@ std::vector<short> audioData;
 //Effects variables
 double DELAY_GAIN = 1;                          //Gain of delay effect
 double DELAY_TIME = 1000;                       //Delay time in miliseconds
-
+double REVERB_GAIN = 1;                         //Reverb strength
 
 struct WAVHeader {
     char riff[4]; // RIFF Header
@@ -239,23 +240,71 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
 
             case ID_EFFECTS_COMPRESSOR:
+                //Loud parts quiet, quiet parts loud
                 break;
             case ID_EFFECTS_DISTORTION:
+                //every harmonics added for square wave
                 break;
             case ID_EFFECTS_PHASER:
+                //Add some peaks to modulation of frequencies
                 break;
             case ID_EFFECTS_FLANGER:
+                //modulate time across music
                 break;
-            case ID_EFFECTS_CHORUS:
+            case ID_EFFECTS_TREMOLO:
+                //pulsating amplitude
+                if (FileLoaded) {
+                    std::vector<short> newAudioData = audioData;
+                    for (int i = 0; i < audioData.size(); i++) {
+
+                        newAudioData[i] *= sin(i/40);
+                    }
+                    audioData.clear();
+                    audioData = newAudioData;
+                    MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK);
+                }
                 break;
-            case ID_EFFECTS_VINTAGE:
-                break;
+
             case ID_EFFECTS_REVERSE:
+                //Reverb, but reverse
+                if (FileLoaded) {
+                    std::vector<short> newAudioData = audioData;
+                    double ReverbFactor = round(44100 * REVERB_GAIN); //1s when REVERB_GAIN = 1;
+
+                    for (double i = 0; i < audioData.size() - ReverbFactor; i++) {
+
+                        for (int j = 1; j < 500; j++) {
+                            newAudioData[i + 500 - j] += audioData[i] * (10 / (10 + j));
+                        }
+
+                    }
+                    audioData.clear();
+                    audioData = newAudioData;
+                    MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK);
+                }
                 break;
+
             case ID_EFFECTS_REVERB:
+                //Decaying sound
+                if (FileLoaded) {
+                    std::vector<short> newAudioData = audioData;
+                    double ReverbFactor = round(44100 * REVERB_GAIN); //1s when REVERB_GAIN = 1;
+
+                    for (double i = 0; i < audioData.size() - ReverbFactor; i++) {
+
+                        for (int j = 1; j < 100; j++) {
+                            newAudioData[i+j] += audioData[i]*(10/(10+j));
+                        }
+
+                    }
+                    audioData.clear();
+                    audioData = newAudioData;
+                    MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK );
+                }
                 break;
 
             case ID_EFFECTS_DELAY:
+                //slight Echo
                 if (FileLoaded) {
                     std::vector<short> newAudioData;
                     double inverse = DELAY_TIME/ 1000;
@@ -268,6 +317,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     audioData = newAudioData;
 
                 }
+                break;
+             
+            case ID_UP_20:
+                for (auto& i : audioData) { i *= 1.20; }
+                break;
+            case ID_UP_10:
+                for (auto& i : audioData) { i *= 1.10; }
+                break;
+            case ID_UP_5:
+                for (auto& i : audioData) { i *= 1.05; }
+                break;
+            case ID_DOWN_5:
+                for (auto& i : audioData) { i *= 0.95; }
+                break;
+            case ID_DOWN_10:
+                for (auto& i : audioData) { i *= 0.90; }
+                break;
+            case ID_DOWN_20:
+                for (auto& i : audioData) { i *= 0.80; }
                 break;
 
             case ID_PLIK_OPEN:
@@ -319,7 +387,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
 
             case ID_BUTTON_PLAY:
-                //PlaySound(selectedFilePath.c_str(), NULL, SND_FILENAME | SND_ASYNC);
                 PlayAudioData();
                 break;
 
