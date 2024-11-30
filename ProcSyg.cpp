@@ -243,13 +243,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 //Loud parts quiet, quiet parts loud
                 break;
             case ID_EFFECTS_DISTORTION:
-                //every harmonics added for square wave
+                if (FileLoaded) {
+                    std::vector<short> newAudioData = audioData;
+
+                    short DistGain = 5;
+                    short MaxAmp = 0;
+
+                    for (auto sample : newAudioData) {
+                        
+                        if (abs(sample) > MaxAmp) { MaxAmp = sample; }
+                    }
+
+                    short DistThreshold = MaxAmp * 0.3;
+
+                    for (auto& sample : newAudioData) {
+
+                        sample *= DistGain;
+
+                        if (sample > (DistThreshold)) { sample = MaxAmp; }
+                        if (sample < (-DistThreshold)) { sample = -MaxAmp; }
+                    }
+
+                    audioData.swap(newAudioData);
+                }
                 break;
             case ID_EFFECTS_PHASER:
                 //Add some peaks to modulation of frequencies
                 break;
             case ID_EFFECTS_FLANGER:
                 //modulate time across music
+                if (FileLoaded) {
+                    std::vector<short> newAudioData = audioData;
+
+                    for (double i = 0; i < audioData.size() - 55; i++) {
+                        int mod = 5 * sin(i/5);
+                        newAudioData[i + mod] += audioData[i] * 0.8;
+
+                    }
+                    audioData.clear();
+                    audioData = newAudioData;
+                }
                 break;
             case ID_EFFECTS_TREMOLO:
                 //pulsating amplitude
@@ -264,7 +297,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK);
                 }
                 break;
-
             case ID_EFFECTS_REVERSE:
                 //Reverb, but reverse
                 if (FileLoaded) {
@@ -283,7 +315,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK);
                 }
                 break;
-
             case ID_EFFECTS_REVERB:
                 //Decaying sound
                 if (FileLoaded) {
@@ -302,7 +333,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     MessageBox(hWnd, L"Done!", L"Succes", MB_OK | MB_ICONASTERISK );
                 }
                 break;
-
             case ID_EFFECTS_DELAY:
                 //slight Echo
                 if (FileLoaded) {
@@ -318,7 +348,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 }
                 break;
-             
             case ID_UP_20:
                 for (auto& i : audioData) { i *= 1.20; }
                 break;
@@ -337,7 +366,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case ID_DOWN_20:
                 for (auto& i : audioData) { i *= 0.80; }
                 break;
-
             case ID_PLIK_OPEN:
             {
                 OPENFILENAME file;            // common dialog box structure
@@ -385,20 +413,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
             }
                 break;
-
             case ID_BUTTON_PLAY:
                 PlayAudioData();
                 break;
-
-
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
-
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
-
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
