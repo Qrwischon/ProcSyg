@@ -43,6 +43,7 @@ double DELAY_GAIN = 1;                          //Gain of delay effect
 double DELAY_TIME = 1000;                       //Delay time in miliseconds
 
 
+
 struct WAVHeader {
     char riff[4]; // RIFF Header
     unsigned int fileSize; // File size
